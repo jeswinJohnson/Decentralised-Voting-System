@@ -13,12 +13,17 @@ contract Votting {
         uint256 end;
     }
 
+    struct ElectionStatus{
+        ElectionTime electionTime;
+        uint256 totalVotes;
+        Candidate[] candidates;
+    }
+
     mapping(string => bool) public voters;
     mapping(address => bool) public operators;
     Candidate[] public candidates;
-
     ElectionTime public electionTime;
-
+    uint256 public totalVoteCount;
     address public owner;
 
     constructor(uint startTime, uint endTime, address[] memory operatorsList, string[] memory candiateList){
@@ -35,6 +40,7 @@ contract Votting {
         }
 
         owner = msg.sender;
+        totalVoteCount = 0;
 
         electionTime = ElectionTime(
             {
@@ -45,12 +51,12 @@ contract Votting {
     }
 
     modifier onlyOwner {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "Eci Operation");
         _;
     }
 
     modifier onlyOperator {
-        require(operators[msg.sender]);
+        require(operators[msg.sender], "Operator Operation");
         _;
     }
 
@@ -60,6 +66,8 @@ contract Votting {
         for(uint256 x = 0; x < candidates.length; x++){
             if (keccak256(abi.encodePacked(candidates[x].name)) == keccak256(abi.encodePacked(partyName))) {
                 candidates[x].voteCount++;
+                voters[votter] = true;
+                totalVoteCount += 1;
                 break;
             }
         }
@@ -76,12 +84,28 @@ contract Votting {
         operators[operatorId] = true;
     }
 
-    function getVotes() public view returns (Candidate[] memory) {
-        return candidates;
+    function getElectionStatus() public view returns (ElectionStatus memory) {
+        return ElectionStatus({
+                electionTime: electionTime,
+                totalVotes: totalVoteCount,
+                candidates: candidates
+            }
+        );
     }
 
     function getElectionTime() view public returns (ElectionTime memory){
         return electionTime;
+    }
+
+    function updateElectionTime(uint256 startTime, uint256 endTime) public onlyOwner() {
+        electionTime = ElectionTime({
+            start: startTime,
+            end: endTime
+        });
+    }
+
+    function blockTime() view public returns (uint256){
+        return block.timestamp;
     }
 
 }
