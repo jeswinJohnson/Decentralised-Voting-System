@@ -7,6 +7,7 @@ import 'package:eci_app/electionTime.dart';
 import 'package:eci_app/home.dart';
 import 'package:eci_app/login.dart';
 import 'package:flutter/material.dart';
+import 'global.dart' as global;
 
 class SideBar extends StatefulWidget {
   const SideBar({super.key});
@@ -20,10 +21,14 @@ Widget currentPage = Home();
 class _SideBarState extends State<SideBar> {
   @override
   Widget build(BuildContext context) {
+
+    if(global.privateKey == null){
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Login()));
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        
         Container(
           width: 60,
           color: Colors.black,
@@ -86,7 +91,10 @@ class _SideBarState extends State<SideBar> {
 
               // Logout
               IconButton(
-                onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Login())),
+                onPressed: (){
+                  global.privateKey = null;
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Login()));
+                },
                 icon: Icon(Icons.logout)
               ),
 
