@@ -1,7 +1,16 @@
-import 'package:http/http.dart' as http;
+import 'dart:async';
+import 'dart:convert';
 
-Map<String, dynamic> electionStatus() {
-  http.get(Uri.parse('https://jsonplaceholder.typicode.com/albums/1'));
+import 'package:http/http.dart' as http;
+import 'package:http/http.dart';
+
+Uri urlParser(endPoint){
+  return Uri.parse('http://localhost:3000/$endPoint');
+}
+
+Future<Map<String, dynamic>> electionStatus() async {
+  Response res = await http.get(urlParser("getElectionStatus"));
+  return jsonDecode(res.body);
 }
 
 // Map<String, int> currentElectionTime() {}
