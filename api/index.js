@@ -32,7 +32,7 @@ const CONTRACT_ABI = [
             },
             {
                 "internalType": "address[]",
-                "name": "operatorsList",
+                "name": "passedOperatorsList",
                 "type": "address[]"
             },
             {
@@ -89,6 +89,24 @@ const CONTRACT_ABI = [
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "voterName",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "voterId",
+                "type": "string"
+            }
+        ],
+        "name": "addVotter",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "blockTime",
         "outputs": [
@@ -138,6 +156,31 @@ const CONTRACT_ABI = [
                 "internalType": "uint256",
                 "name": "end",
                 "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getCandidates",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "string",
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "voteCount",
+                        "type": "uint256"
+                    }
+                ],
+                "internalType": "struct Votting.Candidate[]",
+                "name": "",
+                "type": "tuple[]"
             }
         ],
         "stateMutability": "view",
@@ -223,6 +266,44 @@ const CONTRACT_ABI = [
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "getOperators",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getVotter",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "string",
+                        "name": "userName",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "userId",
+                        "type": "string"
+                    }
+                ],
+                "internalType": "struct Votting.VotterVisible[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",
@@ -296,9 +377,43 @@ const CONTRACT_ABI = [
         "name": "voters",
         "outputs": [
             {
+                "internalType": "string",
+                "name": "userName",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "userId",
+                "type": "string"
+            },
+            {
                 "internalType": "bool",
-                "name": "",
+                "name": "hasVoted",
                 "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "votersList",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "userName",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "userId",
+                "type": "string"
             }
         ],
         "stateMutability": "view",
@@ -333,6 +448,62 @@ app.get('/getElectionStatus', express.json({ type: '/' }), async (req, res) => {
     })
 })
 
+app.get('/getCandidates', express.json({ type: '/' }), async (req, res) => {
+    const wallet = new ethers.Wallet(GenralAccount, provider);
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+
+    let candidateJson = [];
+    let response = await contract.getCandidates()
+
+    response.forEach((party) => {
+        candidateJson.push(party[0])
+    }
+    );
+
+    res.send({
+        "candidates": candidateJson
+    })
+})
+
+app.get('/getVoters', express.json({ type: '/' }), async (req, res) => {
+    const wallet = new ethers.Wallet(GenralAccount, provider);
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+
+    let voterJson = [];
+    let response = await contract.getVotter()
+
+    response.forEach((voter) => {
+        voterJson.push(
+            {
+                "name": voter[0],
+                "id": voter[1],
+            }
+        )
+    }
+    );
+
+    res.send({
+        "voters": voterJson
+    })
+})
+
+app.get('/getOperators', express.json({ type: '/' }), async (req, res) => {
+    const wallet = new ethers.Wallet(GenralAccount, provider);
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+
+    let operatorsJson = [];
+    let response = await contract.getOperators()
+
+    response.forEach((party) => {
+        operatorsJson.push(party)
+    }
+    );
+
+    res.send({
+        "operators": operatorsJson
+    })
+})
+
 app.get('/blockTime', express.json({ type: '/' }), async (req, res) => {
     const wallet = new ethers.Wallet(GenralAccount, provider);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
@@ -356,21 +527,28 @@ app.get('/getElectionTime', express.json({ type: '/' }), async (req, res) => {
 app.post('/updateElectionTime', express.json({ type: '/' }), async (req, res) => {
     
     if (req.get("key") == undefined || req.get("key") == ""){
-        res.send("Invalid Request")
+        res.send("Invalid Request(Key)")
     }else{
         const response = req.body;
-
         if (response.startTime == undefined || response.endTime == undefined){
-            res.send("Invalid Request")
+            res.send("Invalid Request(Body)")
         }else{
-            const wallet = new ethers.Wallet(req.get("key"), provider);
-            const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
-            try{
-                const tx = await contract.updateElectionTime(response.startTime, response.endTime);
+            try {
+                const wallet = new ethers.Wallet(req.get("key"), provider);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+
+                const tx = await contract.updateElectionTime(parseInt(response.startTime), parseInt(response.endTime));
                 await tx.wait();
                 res.send("200")
             } catch(e){
-                res.send(e.info.error.data.reason)
+                if (e.code == 'INVALID_ARGUMENT'){
+                    res.send({
+                        "code": 402,
+                        "id": "invalidArgument"
+                    })
+                }else{
+                    res.send(e.info.error.data.reason)
+                }
             }
         }
     }
@@ -386,14 +564,21 @@ app.post('/addCandidate', express.json({ type: '/' }), async (req, res) => {
         if (response.partyName == undefined) {
             res.send("Invalid Request")
         } else {
-            const wallet = new ethers.Wallet(req.get("key"), provider);
-            const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
             try {
+                const wallet = new ethers.Wallet(req.get("key"), provider);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
                 const tx = await contract.addCandidate(response.partyName);
                 await tx.wait();
                 res.send("200")
             } catch (e) {
-                res.send(e.info.error.data.reason)
+                if (e.code == 'INVALID_ARGUMENT') {
+                    res.send({
+                        "code": 402,
+                        "id": "invalidArgument"
+                    })
+                } else {
+                    res.send(e.info.error.data.reason)
+                }
             }
         }
     }
@@ -432,14 +617,99 @@ app.post('/addOperator', express.json({ type: '/' }), async (req, res) => {
         if (response.operatorId == undefined) {
             res.send("Invalid Request")
         } else {
-            const wallet = new ethers.Wallet(req.get("key"), provider);
-            const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
             try {
+                const wallet = new ethers.Wallet(req.get("key"), provider);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
                 const tx = await contract.addOperator(response.operatorId);
                 await tx.wait();
                 res.send("200")
             } catch (e) {
-                res.send(e.info.error.data.reason)
+                console.log(e)
+                if (e.code == 'INVALID_ARGUMENT') {
+                    res.send({
+                        "code": 402,
+                        "id": "invalidArgument"
+                    })
+                } else if (e.code == 'UNSUPPORTED_OPERATION') {
+                    res.send({
+                        "code": 403,
+                        "id": "invalid id format"
+                    })
+                } else {
+                    res.send(e.info.error.data.reason)
+                }
+            }
+        }
+    }
+})
+
+app.post('/addVotter', express.json({ type: '/' }), async (req, res) => {
+
+    if (req.get("key") == undefined || req.get("key") == "") {
+        res.send("Invalid Request")
+    } else {
+        const response = req.body;
+
+        if (response.voterName == undefined || response.voterId == undefined) {
+            res.send("Invalid Request")
+        } else {
+            try {
+                const wallet = new ethers.Wallet(req.get("key"), provider);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+                const tx = await contract.addVotter(response.voterName, response.voterId);
+                await tx.wait();
+                res.send("200")
+            } catch (e) {
+                console.log(e)
+                if (e.code == 'INVALID_ARGUMENT') {
+                    res.send({
+                        "code": 402,
+                        "id": "invalidArgument"
+                    })
+                } else if (e.code == 'UNSUPPORTED_OPERATION') {
+                    res.send({
+                        "code": 403,
+                        "id": "invalid id format"
+                    })
+                } else {
+                    res.send(e.info.error.data.reason)
+                }
+            }
+        }
+    }
+})
+
+app.post('/addVoter', express.json({ type: '/' }), async (req, res) => {
+
+    if (req.get("key") == undefined || req.get("key") == "") {
+        res.send("Invalid Request")
+    } else {
+        const response = req.body;
+
+        if (response.votterName == undefined || response.votterId == undefined) {
+            res.send("Invalid Request")
+        } else {
+            try {
+                const wallet = new ethers.Wallet(req.get("key"), provider);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+                const tx = await contract.addVotter(response.votterName, response.votterId);
+                await tx.wait();
+                res.send("200")
+            } catch (e) {
+                console.log(e)
+                if (e.code == 'INVALID_ARGUMENT') {
+                    res.send({
+                        "code": 402,
+                        "id": "invalidArgument"
+                    })
+                } else if (e.code == 'UNSUPPORTED_OPERATION') {
+                    res.send({
+                        "code": 403,
+                        "id": "invalid id format"
+                    })
+                } else {
+                    res.send(e.info.error.data.reason)
+                }
             }
         }
     }

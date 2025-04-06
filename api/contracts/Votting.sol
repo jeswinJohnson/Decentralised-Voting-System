@@ -19,17 +19,34 @@ contract Votting {
         Candidate[] candidates;
     }
 
-    mapping(string => bool) public voters;
+    struct Votter{
+        string userName;
+        string userId;
+        bool hasVoted;
+    }
+
+    struct VotterVisible{
+        string userName;
+        string userId;
+    }
+
+    mapping(string => Votter) public voters;
+    VotterVisible[] public votersList;
+
     mapping(address => bool) public operators;
     Candidate[] public candidates;
+    address[] private operatorsList;
     ElectionTime public electionTime;
+    
+
     uint256 public totalVoteCount;
     address public owner;
 
-    constructor(uint startTime, uint endTime, address[] memory operatorsList, string[] memory candiateList){
+    constructor(uint startTime, uint endTime, address[] memory passedOperatorsList, string[] memory candiateList){
 
-        for (uint256 i = 0; i < operatorsList.length; i++) {
-            operators[operatorsList[i]] = true;
+        for (uint256 i = 0; i < passedOperatorsList.length; i++) {
+            operators[passedOperatorsList[i]] = true;
+            operatorsList.push(passedOperatorsList[i]);
         }
 
         for (uint256 i = 0; i < candiateList.length; i++) {
@@ -61,17 +78,38 @@ contract Votting {
     }
 
     function addVote(string memory votter, string memory partyName) public onlyOperator() {
-        require(!voters[votter], "Already Voted");
+        require(!voters[votter].hasVoted, "Already Voted");
 
         for(uint256 x = 0; x < candidates.length; x++){
             if (keccak256(abi.encodePacked(candidates[x].name)) == keccak256(abi.encodePacked(partyName))) {
                 candidates[x].voteCount++;
-                voters[votter] = true;
+                voters[votter].hasVoted = true;
                 totalVoteCount += 1;
                 break;
             }
         }
     }
+
+    function addVotter(string memory voterName, string memory voterId) public onlyOwner {
+
+        voters[voterId] = Votter({
+                userName: voterName,
+                userId: voterId,
+                hasVoted: false
+            }
+        );
+
+        votersList.push(VotterVisible({
+           userName: voterName,
+            userId: voterId
+        }));
+    }
+
+    function getVotter() public view returns (VotterVisible[] memory) {
+        return votersList;
+    }
+
+
 
     function addCandidate(string memory candidateName) public onlyOwner {
         candidates.push(Candidate({
@@ -80,8 +118,13 @@ contract Votting {
         }));
     }
 
+    function getCandidates() public view returns (Candidate[] memory) {
+        return candidates;
+    }
+
     function addOperator(address operatorId) public onlyOwner {
         operators[operatorId] = true;
+        operatorsList.push(operatorId);
     }
 
     function getElectionStatus() public view returns (ElectionStatus memory) {
@@ -91,6 +134,10 @@ contract Votting {
                 candidates: candidates
             }
         );
+    }
+
+    function getOperators() public view returns (address[] memory) {
+        return operatorsList;
     }
 
     function getElectionTime() view public returns (ElectionTime memory){

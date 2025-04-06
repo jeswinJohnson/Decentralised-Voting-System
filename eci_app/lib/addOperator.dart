@@ -1,6 +1,8 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors
 
+import 'package:eci_app/logic.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class AddOperator extends StatefulWidget {
   const AddOperator({super.key});
@@ -9,12 +11,11 @@ class AddOperator extends StatefulWidget {
   State<AddOperator> createState() => _AddOperatorState();
 }
 
+TextEditingController operatorIdController = TextEditingController();
+
 class _AddOperatorState extends State<AddOperator> {
   @override
   Widget build(BuildContext context) {
-
-    List<String> operators = ["Operator1", "Operator2", "Operator3"];
-
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -35,6 +36,7 @@ class _AddOperatorState extends State<AddOperator> {
                 width: 350, 
                 child: Material(
                   child: TextField(
+                    controller: operatorIdController,
                     decoration: InputDecoration(
                       hintText: "Operator Address"
                     ),
@@ -45,7 +47,31 @@ class _AddOperatorState extends State<AddOperator> {
               SizedBox(width: 20),
               
               FilledButton(
-                onPressed: () => print(""), 
+                onPressed: () async {
+
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => Center(child: SizedBox(child: CircularProgressIndicator()))
+                  );
+
+
+                  if(operatorIdController.text == ""){
+                    Get.snackbar(
+                      "Title",
+                      "Operator ID Cannot Be Empty!",
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  }else{
+                    Get.snackbar(
+                      "Title",
+                      await addOperator(operatorIdController.text),
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  }
+
+                  Navigator.pop(context);
+                }, 
                 child: Text("Add")
               )
             ],
@@ -64,15 +90,35 @@ class _AddOperatorState extends State<AddOperator> {
             height: 8,
           ),
 
-          Expanded(
-            child: ListView.builder(
-              itemCount: operators.length,
-              itemBuilder: (context, index) => Card(
-                child: ListTile(
-                  title: Text(operators[index]),
+          FutureBuilder(
+            future: getOperators(),
+            builder: (context, snapShot) {
+
+              if(snapShot.connectionState != ConnectionState.done){
+                return SizedBox(
+                  child: CircularProgressIndicator(),
+                );
+              }
+
+              if (snapShot.data == null) {
+                return Center(
+                  child: Text("Sorry, Error Occured!"),
+                );
+              }
+
+              var responseData = snapShot.data!;
+
+              return Expanded(
+                child: ListView.builder(
+                  itemCount: responseData["operators"].length,
+                  itemBuilder: (context, index) => Card(
+                    child: ListTile(
+                      title: Text(responseData["operators"][index]),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            }
           )
         ],
       ),

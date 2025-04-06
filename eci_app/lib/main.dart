@@ -1,9 +1,11 @@
 // ignore_for_file: prefer_const_constructors
 
+import 'package:eci_app/global.dart';
 import 'package:eci_app/login.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-void main() {
+Future<void> main() async {
   runApp(const MainApp());
 }
 
@@ -12,8 +14,9 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: snackbarKey,
       theme: ThemeData(
         textTheme: TextTheme(
           displayMedium: TextStyle(
